@@ -1,9 +1,6 @@
 #!/bin/bash
 
-# while true
-#    open a netcat session listeing on port 40
-#    pipe the result to a fifo and echo back the message received
-#    close the connection and loop again
+trap exit SIGINT
 
 trap "rm -f fifo" EXIT
 
@@ -12,5 +9,5 @@ if [[ ! -p fifo ]]; then
 fi
 
 while [[ true ]]; do
-    cat fifo | nc -l 8080 | awk '{ if ($2 ~ /html/ && system("[ -f " $2 "  ]") == 0) system("cat " $2); else print "500" }' > fifo
+    cat <(cat fifo) - | nc -l 8080 | awk '{ if ($2 ~ /html$/ && system("[ -f " $2 "  ]") == 0) system("printf \"HTTP/1.0 200 OK\r\rContent-Length: %s\r\n\r\n\" \"$(wc -c " $2 ")\"; cat " $2 ); else print "HTTP/1.0 500 Internal Server Error" }' > fifo
 done
